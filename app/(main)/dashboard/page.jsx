@@ -8,6 +8,9 @@ import { BudgetProgress } from "./_components/budget-progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { DashboardOverview } from "./_components/transaction-overview";
+import { PredictionCard } from "@/_components/PredictionCard";
+
+
 
 export default async function DashboardPage() {
   const [accounts, transactions] = await Promise.all([
@@ -52,6 +55,12 @@ export default async function DashboardPage() {
             <AccountCard key={account.id} account={account} />
           ))}
       </div>
+
+      {/* Prediction card */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <PredictionCard />
+      </div>
+
     </div>
   );
 }
