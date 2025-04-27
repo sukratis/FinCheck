@@ -8,7 +8,7 @@ import { BudgetProgress } from "./_components/budget-progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { DashboardOverview } from "./_components/transaction-overview";
-import { PredictionCard } from "@/_components/PredictionCard";
+import PredictionCard  from "./_components/PredictionCard";
 
 
 
@@ -40,6 +40,11 @@ export default async function DashboardPage() {
         transactions={transactions || []}
       />
 
+      {/* Prediction card */}
+      <div>
+      <PredictionCard />
+      </div>
+
       {/* Accounts Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <CreateAccountDrawer>
@@ -54,11 +59,6 @@ export default async function DashboardPage() {
           accounts?.map((account) => (
             <AccountCard key={account.id} account={account} />
           ))}
-      </div>
-
-      {/* Prediction card */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <PredictionCard />
       </div>
 
     </div>

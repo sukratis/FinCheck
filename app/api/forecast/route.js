@@ -1,11 +1,8 @@
-import { getPrediction } from '@/lib/forecast';
+import { getPrediction } from "@/lib/forecast";
+import { NextResponse } from "next/server";
 
 export async function GET() {
-  try {
-    const data = await getPrediction();
-    return Response.json({ data });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch prediction' }), { status: 500 });
-  }
+  const data = await getPrediction();
+  return NextResponse.json({ data });
 }
 

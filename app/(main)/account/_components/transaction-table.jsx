@@ -76,11 +76,9 @@ export function TransactionTable({ transactions }) {
   const [currentPage, setCurrentPage] = useState(1);
   const router = useRouter();
 
-  // Memoized filtered and sorted transactions
   const filteredAndSortedTransactions = useMemo(() => {
     let result = [...transactions];
 
-    // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       result = result.filter((transaction) =>
@@ -88,12 +86,10 @@ export function TransactionTable({ transactions }) {
       );
     }
 
-    // Apply type filter
     if (typeFilter) {
       result = result.filter((transaction) => transaction.type === typeFilter);
     }
 
-    // Apply recurring filter
     if (recurringFilter) {
       result = result.filter((transaction) => {
         if (recurringFilter === "recurring") return transaction.isRecurring;
@@ -101,7 +97,6 @@ export function TransactionTable({ transactions }) {
       });
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       let comparison = 0;
 
@@ -125,10 +120,10 @@ export function TransactionTable({ transactions }) {
     return result;
   }, [transactions, searchTerm, typeFilter, recurringFilter, sortConfig]);
 
-  // Pagination calculations
   const totalPages = Math.ceil(
     filteredAndSortedTransactions.length / ITEMS_PER_PAGE
   );
+
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredAndSortedTransactions.slice(
@@ -201,6 +196,7 @@ export function TransactionTable({ transactions }) {
       {deleteLoading && (
         <BarLoader className="mt-4" width={"100%"} color="#9333ea" />
       )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -248,7 +244,6 @@ export function TransactionTable({ transactions }) {
             </SelectContent>
           </Select>
 
-          {/* Bulk Actions */}
           {selectedIds.length > 0 && (
             <div className="flex items-center gap-2">
               <Button
@@ -289,10 +284,7 @@ export function TransactionTable({ transactions }) {
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead
-                className="cursor-pointer"
-                onClick={() => handleSort("date")}
-              >
+              <TableHead className="cursor-pointer" onClick={() => handleSort("date")}>
                 <div className="flex items-center">
                   Date
                   {sortConfig.field === "date" &&
@@ -304,10 +296,7 @@ export function TransactionTable({ transactions }) {
                 </div>
               </TableHead>
               <TableHead>Description</TableHead>
-              <TableHead
-                className="cursor-pointer"
-                onClick={() => handleSort("category")}
-              >
+              <TableHead className="cursor-pointer" onClick={() => handleSort("category")}>
                 <div className="flex items-center">
                   Category
                   {sortConfig.field === "category" &&
@@ -318,10 +307,7 @@ export function TransactionTable({ transactions }) {
                     ))}
                 </div>
               </TableHead>
-              <TableHead
-                className="cursor-pointer text-right"
-                onClick={() => handleSort("amount")}
-              >
+              <TableHead className="cursor-pointer text-right" onClick={() => handleSort("amount")}>
                 <div className="flex items-center justify-end">
                   Amount
                   {sortConfig.field === "amount" &&
@@ -336,13 +322,11 @@ export function TransactionTable({ transactions }) {
               <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {paginatedTransactions.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground"
-                >
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -355,9 +339,7 @@ export function TransactionTable({ transactions }) {
                       onCheckedChange={() => handleSelect(transaction.id)}
                     />
                   </TableCell>
-                  <TableCell>
-                    {format(new Date(transaction.date), "PP")}
-                  </TableCell>
+                  <TableCell>{format(new Date(transaction.date), "PP")}</TableCell>
                   <TableCell>{transaction.description}</TableCell>
                   <TableCell className="capitalize">
                     <span
@@ -372,12 +354,10 @@ export function TransactionTable({ transactions }) {
                   <TableCell
                     className={cn(
                       "text-right font-medium",
-                      transaction.type === "EXPENSE"
-                        ? "text-red-500"
-                        : "text-green-500"
+                      transaction.type === "EXPENSE" ? "text-red-500" : "text-green-500"
                     )}
                   >
-                    {transaction.type === "EXPENSE" ? "-" : "+"}$
+                    {transaction.type === "EXPENSE" ? "-" : "+"}₹
                     {transaction.amount.toFixed(2)}
                   </TableCell>
                   <TableCell>
@@ -427,9 +407,7 @@ export function TransactionTable({ transactions }) {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() =>
-                            router.push(
-                              `/transaction/create?edit=${transaction.id}`
-                            )
+                            router.push(`/transaction/create?edit=${transaction.id}`)
                           }
                         >
                           Edit
@@ -478,3 +456,4 @@ export function TransactionTable({ transactions }) {
     </div>
   );
 }
+
