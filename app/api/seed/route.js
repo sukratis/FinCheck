@@ -1,4 +1,4 @@
-import { seedTransactions } from "@/actions/seed";
+import { seedTransactions } from "@/actions/seed.mjs";
 
 export async function GET() {
   const result = await seedTransactions();

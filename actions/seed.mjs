@@ -1,6 +1,6 @@
-"use server";
 
-import { db } from "@/lib/prisma";
+
+import { db } from "../lib/prisma.js";
 import { subDays } from "date-fns";
 
 const ACCOUNT_ID = "563a138b-376e-442e-8d0d-83e12dce21af";
@@ -43,18 +43,23 @@ function getRandomCategory(type) {
 
 export async function seedTransactions() {
   try {
-    // Generate 90 days of transactions
+    // Get start and end of the current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
     const transactions = [];
     let totalBalance = 0;
 
-    for (let i = 90; i >= 0; i--) {
-      const date = subDays(new Date(), i);
+    // Generate transactions for each day of the current month
+    const daysInMonth = endOfMonth.getDate();
+    for (let i = 0; i < daysInMonth; i++) {
+      const date = new Date(startOfMonth);
+      date.setDate(i + 1);
 
-      // Generate 1-3 transactions per day
       const transactionsPerDay = Math.floor(Math.random() * 3) + 1;
 
       for (let j = 0; j < transactionsPerDay; j++) {
-        // 40% chance of income, 60% chance of expense
         const type = Math.random() < 0.4 ? "INCOME" : "EXPENSE";
         const { category, amount } = getRandomCategory(type);
 
@@ -79,19 +84,24 @@ export async function seedTransactions() {
       }
     }
 
-    // Insert transactions in batches and update account balance
+    // Insert new transactions only (optional: don't delete existing ones)
     await db.$transaction(async (tx) => {
-      // Clear existing transactions
+      // OPTIONAL: delete only this month's existing transactions
       await tx.transaction.deleteMany({
-        where: { accountId: ACCOUNT_ID },
+        where: {
+          accountId: ACCOUNT_ID,
+          date: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
       });
 
-      // Insert new transactions
       await tx.transaction.createMany({
         data: transactions,
       });
 
-      // Update account balance
+      // Update account balance (optional)
       await tx.account.update({
         where: { id: ACCOUNT_ID },
         data: { balance: totalBalance },
@@ -100,10 +110,13 @@ export async function seedTransactions() {
 
     return {
       success: true,
-      message: `Created ${transactions.length} transactions`,
+      message: `Created ${transactions.length} transactions for this month`,
     };
   } catch (error) {
-    console.error("Error seeding transactions:", error);
+    console.error("Error seeding this month's transactions:", error);
     return { success: false, error: error.message };
   }
 }
+
+seedTransactions().then(console.log).catch(console.error);
+

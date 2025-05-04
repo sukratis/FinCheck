@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { DashboardOverview } from "./_components/transaction-overview";
 import PredictionCard  from "./_components/PredictionCard";
+import Link from "next/link";
 
 
 
@@ -44,6 +45,20 @@ export default async function DashboardPage() {
       <div>
       <PredictionCard />
       </div>
+
+      <div>
+        <Link href="/main/smart-budget">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardContent className="p-4">
+              <h3 className="text-lg font-semibold">SMART BUDGET SUGGESTIONS 🧠</h3>
+              <p className="text-sm text-muted-foreground">
+                Get AI-powered monthly budget predictions and suggestions.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
 
       {/* Accounts Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
