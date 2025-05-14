@@ -1,68 +1,66 @@
 "use server";
 
-import aj from "@/lib/arcjet";
-import { db } from "@/lib/prisma";
-import { request } from "@arcjet/next";
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
+import { request } from "@arcjet/next";
+import arcjet from "@/lib/arcjet-sdk"; // correct usage here
+
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 const serializeTransaction = (obj) => {
   const serialized = { ...obj };
   if (obj.balance) {
-    serialized.balance = obj.balance.toNumber();
+    serialized.balance = Number(obj.balance);
   }
   if (obj.amount) {
-    serialized.amount = obj.amount.toNumber();
+    serialized.amount = Number(obj.amount);
   }
   return serialized;
 };
 
-export async function getUserAccounts() {
-  const { userId } = await auth();
+export async function getUserAccounts(userId) {
   if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("clerkUserId", userId)
+    .single();
 
-  if (!user) {
+  if (userError || !userData) {
     throw new Error("User not found");
   }
 
-  try {
-    const accounts = await db.account.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: {
-            transactions: true,
-          },
-        },
-      },
-    });
+  const { data: accounts, error } = await supabase
+    .from("accounts")
+    .select("*, transactions(count)")
+    .eq("userId", userData.id)
+    .order("createdAt", { ascending: false });
 
-    // Serialize accounts before sending to client
-    const serializedAccounts = accounts.map(serializeTransaction);
+  if (error) throw new Error("Failed to fetch accounts");
 
-    return serializedAccounts;
-  } catch (error) {
-    console.error(error.message);
-  }
+  return accounts.map((account) => ({
+    ...serializeTransaction(account),
+    _count: {
+      transactions: account.transactions?.length || 0,
+    },
+  }));
 }
 
 export async function createAccount(data) {
   try {
+    const { auth } = await import("@clerk/nextjs/server");
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    // Get request data for ArcJet
-    const req = await request();
-
-    // Check rate limit
-    const decision = await aj.protect(req, {
+    const req = await request(); // Get full edge request object
+    const decision = await arcjet.protect(req, {
       userId,
-      requested: 1, // Specify how many tokens to consume
+      requested: 1,
     });
 
     if (decision.isDenied()) {
@@ -70,88 +68,87 @@ export async function createAccount(data) {
         const { remaining, reset } = decision.reason;
         console.error({
           code: "RATE_LIMIT_EXCEEDED",
-          details: {
-            remaining,
-            resetInSeconds: reset,
-          },
+          details: { remaining, resetInSeconds: reset },
         });
-
         throw new Error("Too many requests. Please try again later.");
       }
-
       throw new Error("Request blocked");
     }
 
-    const user = await db.user.findUnique({
-      where: { clerkUserId: userId },
-    });
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("clerkUserId", userId)
+      .single();
 
-    if (!user) {
-      throw new Error("User not found");
-    }
+    if (userError || !userData) throw new Error("User not found");
 
-    // Convert balance to float before saving
     const balanceFloat = parseFloat(data.balance);
-    if (isNaN(balanceFloat)) {
-      throw new Error("Invalid balance amount");
-    }
+    if (isNaN(balanceFloat)) throw new Error("Invalid balance amount");
 
-    // Check if this is the user's first account
-    const existingAccounts = await db.account.findMany({
-      where: { userId: user.id },
-    });
+    const { data: existingAccounts, error: accountsError } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("userId", userData.id);
 
-    // If it's the first account, make it default regardless of user input
-    // If not, use the user's preference
+    if (accountsError) throw new Error("Failed to check existing accounts");
+
     const shouldBeDefault =
       existingAccounts.length === 0 ? true : data.isDefault;
 
-    // If this account should be default, unset other default accounts
     if (shouldBeDefault) {
-      await db.account.updateMany({
-        where: { userId: user.id, isDefault: true },
-        data: { isDefault: false },
-      });
+      await supabase
+        .from("accounts")
+        .update({ isDefault: false })
+        .eq("userId", userData.id)
+        .eq("isDefault", true);
     }
 
-    // Create new account
-    const account = await db.account.create({
-      data: {
-        ...data,
-        balance: balanceFloat,
-        userId: user.id,
-        isDefault: shouldBeDefault, // Override the isDefault based on our logic
-      },
-    });
+    const { data: newAccount, error: createError } = await supabase
+      .from("accounts")
+      .insert([
+        {
+          ...data,
+          balance: balanceFloat,
+          userId: userData.id,
+          isDefault: shouldBeDefault,
+        },
+      ])
+      .select()
+      .single();
 
-    // Serialize the account before returning
-    const serializedAccount = serializeTransaction(account);
+    if (createError) throw new Error("Failed to create account");
 
     revalidatePath("/dashboard");
-    return { success: true, data: serializedAccount };
+
+    return { success: true, data: serializeTransaction(newAccount) };
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
-export async function getDashboardData() {
-  const { userId } = await auth();
+export async function getDashboardData(userId) {
   if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("clerkUserId", userId)
+    .single();
 
-  if (!user) {
+  if (userError || !userData) {
     throw new Error("User not found");
   }
 
-  // Get all user transactions
-  const transactions = await db.transaction.findMany({
-    where: { userId: user.id },
-    orderBy: { date: "desc" },
-  });
+  const { data: transactions, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("userId", userData.id)
+    .order("date", { ascending: false });``
+
+  if (error) {
+    throw new Error("Failed to fetch transactions");
+  }
 
   return transactions.map(serializeTransaction);
 }
-

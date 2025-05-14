@@ -8,23 +8,33 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "FinCheck",
-  description: "Personalised Finance & Budget Planner ",
+  description: "Personalised Finance & Budget Planner",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        layout: {
+          showOptionalFields: false,
+        },
+        elements: {
+          formButtonPrimary: "bg-blue-600 hover:bg-blue-700",
+        },
+      }}
+    >
       <html lang="en">
         <head>
           <link rel="icon" href="/logo-sm.png" sizes="any" />
         </head>
-        <body className={`${inter.className}`}>
+        <body className={inter.className}>
           <Header />
           <main className="min-h-screen">{children}</main>
           <Toaster richColors />
 
           <footer className="bg-blue-50 py-12">
             <div className="container mx-auto px-4 text-center text-gray-600">
+              {/* Footer content (optional) */}
             </div>
           </footer>
         </body>
@@ -32,3 +42,4 @@ export default function RootLayout({ children }) {
     </ClerkProvider>
   );
 }
+
